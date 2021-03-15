@@ -5,7 +5,7 @@ import * as nacl from "tweetnacl";
 import WebRTC from './rtc.js';
 
 const ContractName = 'dev-1615731045305-7376841';
-const MaxTimeForResponse = 60 * 1000;
+const MaxTimeForResponse = 10 * 60 * 1000;
 const MinAccountIdLen = 2;
 const MaxAccountIdLen = 64;
 const ValidAccountRe = /^(([a-z\d]+[-_])*[a-z\d]+\.)*([a-z\d]+[-_])*[a-z\d]+$/;
@@ -319,6 +319,9 @@ class App extends React.Component {
                             })
                             return;
                         }
+                        else{
+                            console.log("MaxTimeForResponse exceeded: ", MaxTimeForResponse);
+                        }
                     }
                 }
             } catch (e) {
@@ -441,22 +444,27 @@ class App extends React.Component {
                 this.state.transfer_token_id = Object.keys(this.state.tokens)[0];
         })
 
-         setInterval(() => {
-             const tokenId = this.state.receiverId;
-             if (tokenId && this.state.calling) {
-                 this._contract.get_token({token_id: tokenId}).then((token) => {
-                     if(!!token){
-                         const token_owner = token.owner_id;
-                         console.log(`token_owner: ${token_owner}`);
-                         if(token_owner !== this.state.initial_receiver) {
-                             console.log("New Token Owner");
-                             this.setState({initial_receiver: token_owner})
-                             this.hangUp();
-                             this.initCall()
-                         }
-                     }
-                 })
-             }
+        setInterval(() => {
+            const tokenId = this.state.receiverId;
+            if (tokenId && this.state.calling) {
+                this._contract.get_token({token_id: tokenId}).then((token) => {
+                    if (!!token) {
+                        const token_owner = token.owner_id;
+                        console.log(`token_owner: ${token_owner} initial_receiver: ${this.state.initial_receiver}`);
+                        if (token_owner !== this.state.initial_receiver) {
+                            console.log("New Token Owner");
+                            if(this.state.initial_receiver ) {
+                                this.setState({initial_receiver: token_owner})
+                                this.hangUp();
+                                this.initCall()
+                            }
+                            else {
+                                this.setState({initial_receiver: token_owner})
+                            }
+                        }
+                    }
+                })
+            }
         }, 5000);
 
     }
@@ -475,7 +483,7 @@ class App extends React.Component {
             return Object.keys(this.state.tokens).length
                 ? <div>
                     <select id="type" onChange={(e) => this.state.transfer_token_id = e.target.value}
-                            value={this.state.transfer_token_id}>
+                            defaultValue={this.state.transfer_token_id}>
                         {Object.keys(this.state.tokens).map((token) => {
                             return <option key={token} value={token}>{token}</option>;
                         })}
@@ -590,13 +598,13 @@ class App extends React.Component {
 
                     <h5>Mint NFT</h5>
                     <MintNft/>
-                    <hr />
+                    <hr/>
                     <h5>Transfer NFT</h5>
                     <TransferNft/>
-                    <hr />
+                    <hr/>
                     <h5>All NFTs</h5>
                     <AllNFTs/>
-                    <hr />
+                    <hr/>
 
                     <button
                         onClick={async event => {
