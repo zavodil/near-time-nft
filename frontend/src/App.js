@@ -106,7 +106,7 @@ class App extends React.Component {
         if (!!this._accountId) {
             this._account = this._walletConnection.account();
             this._contract = new nearlib.Contract(this._account, ContractName, {
-                viewMethods: ['get_tokens',
+                viewMethods: ['get_tokens', 'get_token',
                     'get_key', 'get_key_by_token_owner', 'get_key_by_token_creator',
                     'get_request_by_token', 'get_response_by_token'],
                 changeMethods: ['set_key', 'request_by_token', 'respond_by_token', 'sale_token', 'mint'],
@@ -433,14 +433,31 @@ class App extends React.Component {
     }
 
     OnChatLoad() {
-        // setInterval(() => {
+
         this._contract.get_tokens().then((tokens) => {
             this.setState({tokens: tokens})
 
             if (Object.keys(this.state.tokens).length)
                 this.state.transfer_token_id = Object.keys(this.state.tokens)[0];
         })
-        //}, 1000);
+
+         setInterval(() => {
+             const tokenId = this.state.receiverId;
+             if (tokenId && this.state.calling) {
+                 this._contract.get_token({token_id: tokenId}).then((token) => {
+                     if(!!token){
+                         const token_owner = token.owner_id;
+                         console.log(`token_owner: ${token_owner}`);
+                         if(token_owner !== this.state.initial_receiver) {
+                             console.log("New Token Owner");
+                             this.setState({initial_receiver: token_owner})
+                             this.hangUp();
+                             this.initCall()
+                         }
+                     }
+                 })
+             }
+        }, 5000);
 
     }
 
